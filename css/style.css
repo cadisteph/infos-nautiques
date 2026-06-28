@@ -1,251 +1,215 @@
-/* =======================================
-   INFOS NAUTIQUES - VERSION FINALE INTÉGRALE
-   ======================================= */
+/* ==========================================
+   1. VARIABLES ET CONFIGURATION GÉNÉRALE
+   ========================================== */
+:root {
+    --bg-color: #131c33;
+    --card-bg: #1c304a;
+    --text-color: #ffffff;
+    --text-secondary: #94a3b8;
+    --accent-color: #38bdf8;
+    --danger-color: #ef4444;
+}
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    background: linear-gradient(180deg, #131c33 0%, #1c304a 50%, #264366 100%);
-    background-attachment: fixed;
-    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
     min-height: 100vh;
     padding-bottom: 30px;
 }
 
-.conteneur {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 16px;
-}
-
-header {
-    text-align: center;
-    padding: 20px 16px 10px 16px;
-}
-
-header h1 {
-    font-size: 1.8rem;
-    font-weight: 700;
-}
-
-#homeBtn {
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: #fff;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin-top: 10px;
-    cursor: pointer;
-}
-
-button.ville {
-    display: block;
-    width: 100%;
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    padding: 16px;
-    color: #ffffff;
-    text-align: left;
-    font-size: 1.05rem;
-    font-weight: 500;
-    margin-bottom: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-button.ville:hover {
-    background: rgba(255, 255, 255, 0.15) !important;
-    border-color: rgba(56, 189, 248, 0.4) !important;
-    transform: translateY(-2px);
-}
-
-.carte {
-    background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
-    margin-bottom: 16px;
-}
-
-.carte-header {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.45);
-    letter-spacing: 0.5px;
-    margin-bottom: 14px;
-    text-transform: uppercase;
-}
-
-/* =======================================
-   1. ESPACE MÉTÉO (CORRECTIF TEXTE BLANC LUMINEUX)
-   ======================================= */
-#carteMeteo .carte-body div[style*="font-size: 3rem"] {
-    font-size: 3rem !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
-}
-
-/* Ciblage ultra-agressif pour forcer "Partiellement nuageux" en blanc éclatant */
-#carteMeteo .carte-body div, 
-#carteMeteo .carte-body > div:nth-of-type(2),
-#carteMeteo .carte-body style + div + div,
-#carteMeteo .carte-body * {
-    color: #ffffff !important;   /* Forçage en blanc pur */
-    opacity: 1 !important;       /* Annule toute transparence cachée */
-}
-
-/* Restauration de la taille pour la ligne de l'état météo */
-#carteMeteo .carte-body > div:nth-of-type(2),
-#carteMeteo .carte-body style + div + div {
-    font-size: 1.05rem !important;
-    font-weight: 500 !important;
-    margin-top: 2px;
-    margin-bottom: 15px;
-}
-
-/* Prévisions horaires du bas (on les laisse respirer) */
-#carteMeteo .carte-body span {
-    color: #ffffff !important;
-    opacity: 0.9 !important;
-}
-
-/* =======================================
-   2. ESPACE MARÉE (FOND ROUGE UNIQUE CHIRURGICAL)
-   ======================================= */
-.badge-coeff {
-    background-color: #ff3b30 !important; /* Fond Rouge vif */
-    color: #ffffff !important;            /* Écriture blanche */
-    font-weight: 700 !important;
-    padding: 3px 8px !important;
-    border-radius: 4px !important;
-    display: inline-block !important;
-}
-
-/* =======================================
-   3. ESPACE VENT (BLEU CLAIR RESTAURÉ)
-   ======================================= */
-#carteVent .val-principal {
-    font-size: 2.2rem !important;
-    font-weight: 800 !important;
-    color: #38bdf8 !important; /* Bleu clair */
-}
-#carteVent .val-principal span { 
-    color: #38bdf8 !important;
-    font-size: 1.1rem !important;
-}
-
-/* =======================================
-   4. ESPACE HOULE (VERT RESTAURÉ)
-   ======================================= */
-#carteHoule .val-principal {
-    font-size: 2.2rem !important;
-    font-weight: 800 !important;
-    color: #22c55e !important; /* Vert */
-}
-#carteHoule .val-principal span { 
-    color: #22c55e !important;
-    font-size: 1.1rem !important;
-}
-
-/* Structure interne commune */
-.sous-val {
-    font-size: 1rem !important;
-    color: rgba(255, 255, 255, 0.8) !important;
-}
-.direction-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 8px 12px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-}
-
-/* =======================================
-   5. ESPACE WEBCAMS & DATA LIGNES
-   ======================================= */
-#carteWebcam { background: rgba(0, 0, 0, 0.18) !important; }
-#carteWebcam .carte-body div[style*="padding"] {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-}
-
-.data-ligne {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-.data-ligne:last-child { border-bottom: none; }
-.data-ligne .label { color: rgba(255, 255, 255, 0.55) !important; }
-.data-ligne .valeur { font-weight: 500; color: #ffffff !important; }
-/* Style de l'écran de démarrage */
+/* ==========================================
+   2. ÉCRAN DE DÉMARRAGE (SPLASH SCREEN)
+   ========================================== */
 #splash-screen {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #131c33 0%, #1c304a 100%);
+    /* Charge ton image ecran.jpg, la centre et l'adapte sans déformer */
+    background: #0d1726 url('../ecran.jpg') no-repeat center center;
+    background-size: cover;
+    z-index: 9999; /* Reste au-dessus de tout le reste */
+    /* Gère la transition fluide du Fade Out (fondu) sur 0.5s */
+    transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Classe ajoutée par le JavaScript au bout de 2 secondes pour lancer le fondu */
+.splash-hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* ==========================================
+   3. EN-TÊTE (HEADER) ET BOUTONS
+   ========================================== */
+header {
+    background-color: var(--card-bg);
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999; /* Toujours au dessus */
-    transition: opacity 0.5s ease-out, visibility 0.5s;
+    gap: 15px;
 }
 
-.splash-content {
+header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+button {
+    background-color: var(--accent-color);
+    color: #000000;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+button:active {
+    opacity: 0.8;
+}
+
+.home-btn, .retour-btn {
+    background-color: #334155;
+    color: var(--text-color);
+}
+
+.retour-btn {
+    display: block;
+    width: calc(100% - 40px);
+    max-width: 400px;
+    margin: 30px auto 0 auto;
     text-align: center;
 }
 
-.splash-logo {
-    font-size: 80px;
-    margin-bottom: 20px;
-}
-
-.splash-title {
-    color: white;
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 30px;
-}
-
-.splash-loader {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(255, 255, 255, 0.1);
-    border-left-color: #38bdf8;
-    border-radius: 50%;
+/* ==========================================
+   4. PAGE ACCUEIL : LISTE DES VILLES
+   ========================================== */
+#accueil {
+    padding: 20px;
+    max-width: 600px;
     margin: 0 auto;
+}
+
+#listeVilles {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.ville-card {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.1s;
+}
+
+.ville-card:active {
+    transform: scale(0.98);
+}
+
+/* ==========================================
+   5. PAGE VILLE : LES CARTES DE MODULES
+   ========================================== */
+#pageVille {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+#nomVille {
+    text-align: center;
+    margin: 10px 0 5px 0;
+    font-size: 1.8rem;
+}
+
+.update-time {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 25px;
+}
+
+.cartes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.carte {
+    background-color: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.carte h3 {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+}
+
+.carte-body {
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+/* Style rouge pour le coefficient de Marée important */
+.badge-danger {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+.dev-note {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+}
+
+/* ==========================================
+   6. ÉLÉMENT DE CHARGEMENT (LOADER)
+   ========================================== */
+.loader {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-left-color: var(--accent-color);
+    border-radius: 50%;
+    display: block;
+    margin: 10px auto;
     animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
-}
-
-/* Classe pour cacher le splash screen */
-.splash-hidden {
-    opacity: 0;
-    visibility: hidden;
 }
