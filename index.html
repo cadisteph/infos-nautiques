@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infos Nautiques</title>
+    
+    <link rel="manifest" href="manifest.json">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#131c33">
+    <meta name="apple-mobile-web-app-title" content="Nautique">
+    
+    <link rel="stylesheet" href="css/style.css?v=1.2">
+</head>
+<body>
+
+<header>
+    <h1>🌊 Infos Nautiques</h1>
+    <button id="homeBtn" class="home-btn" style="display:none;">🏠 Accueil</button>
+</header>
+
+<main>
+    <section id="accueil">
+        <div id="listeVilles"></div>
+    </section>
+
+    <section id="pageVille" style="display:none;">
+        <h2 id="nomVille"></h2>
+        <div id="updateTime" class="update-time"></div>
+
+        <div class="cartes">
+            <div class="carte" id="carteMeteo">
+                <h3>☀️ MÉTÉO</h3>
+                <div class="carte-body"><span class="loader"></span></div>
+            </div>
+
+            <div class="carte" id="carteVent">
+                <h3>💨 VENT</h3>
+                <div class="carte-body"><span class="loader"></span></div>
+            </div>
+
+            <div class="carte" id="carteHoule">
+                <h3>🌊 HOULE</h3>
+                <div class="carte-body"><span class="loader"></span></div>
+            </div>
+
+            <div class="carte" id="carteMaree">
+                <h3>🌊 MARÉE</h3>
+                <div class="carte-body"><span class="loader"></span></div>
+            </div>
+
+            <div class="carte" id="carteWebcam">
+                <h3>📷 WEBCAMS</h3>
+                <div class="carte-body">
+                    <p class="dev-note">En cours de développement</p>
+                </div>
+            </div>
+        </div>
+
+        <button id="retour" class="retour-btn">⬅ Retour</button>
+    </section>
+</main>
+
+<script src="js/utils.js"></script>
+<script src="js/meteo.js"></script>
+<script src="js/marine.js"></script>
+<script src="js/marees.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

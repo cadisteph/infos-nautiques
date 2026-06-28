@@ -1,0 +1,201 @@
+/* =======================================
+   INFOS NAUTIQUES - VERSION FINALE INTÉGRALE
+   ======================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    background: linear-gradient(180deg, #131c33 0%, #1c304a 50%, #264366 100%);
+    background-attachment: fixed;
+    color: #ffffff;
+    min-height: 100vh;
+    padding-bottom: 30px;
+}
+
+.conteneur {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+header {
+    text-align: center;
+    padding: 20px 16px 10px 16px;
+}
+
+header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+#homeBtn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+button.ville {
+    display: block;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 16px;
+    color: #ffffff;
+    text-align: left;
+    font-size: 1.05rem;
+    font-weight: 500;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+button.ville:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
+    transform: translateY(-2px);
+}
+
+.carte {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
+    margin-bottom: 16px;
+}
+
+.carte-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+}
+
+/* =======================================
+   1. ESPACE MÉTÉO (CORRECTIF TEXTE BLANC LUMINEUX)
+   ======================================= */
+#carteMeteo .carte-body div[style*="font-size: 3rem"] {
+    font-size: 3rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+}
+
+/* Ciblage ultra-agressif pour forcer "Partiellement nuageux" en blanc éclatant */
+#carteMeteo .carte-body div, 
+#carteMeteo .carte-body > div:nth-of-type(2),
+#carteMeteo .carte-body style + div + div,
+#carteMeteo .carte-body * {
+    color: #ffffff !important;   /* Forçage en blanc pur */
+    opacity: 1 !important;       /* Annule toute transparence cachée */
+}
+
+/* Restauration de la taille pour la ligne de l'état météo */
+#carteMeteo .carte-body > div:nth-of-type(2),
+#carteMeteo .carte-body style + div + div {
+    font-size: 1.05rem !important;
+    font-weight: 500 !important;
+    margin-top: 2px;
+    margin-bottom: 15px;
+}
+
+/* Prévisions horaires du bas (on les laisse respirer) */
+#carteMeteo .carte-body span {
+    color: #ffffff !important;
+    opacity: 0.9 !important;
+}
+
+/* =======================================
+   2. ESPACE MARÉE (FOND ROUGE UNIQUE CHIRURGICAL)
+   ======================================= */
+.badge-coeff {
+    background-color: #ff3b30 !important; /* Fond Rouge vif */
+    color: #ffffff !important;            /* Écriture blanche */
+    font-weight: 700 !important;
+    padding: 3px 8px !important;
+    border-radius: 4px !important;
+    display: inline-block !important;
+}
+
+/* =======================================
+   3. ESPACE VENT (BLEU CLAIR RESTAURÉ)
+   ======================================= */
+#carteVent .val-principal {
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    color: #38bdf8 !important; /* Bleu clair */
+}
+#carteVent .val-principal span { 
+    color: #38bdf8 !important;
+    font-size: 1.1rem !important;
+}
+
+/* =======================================
+   4. ESPACE HOULE (VERT RESTAURÉ)
+   ======================================= */
+#carteHoule .val-principal {
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    color: #22c55e !important; /* Vert */
+}
+#carteHoule .val-principal span { 
+    color: #22c55e !important;
+    font-size: 1.1rem !important;
+}
+
+/* Structure interne commune */
+.sous-val {
+    font-size: 1rem !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+.direction-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+/* =======================================
+   5. ESPACE WEBCAMS & DATA LIGNES
+   ======================================= */
+#carteWebcam { background: rgba(0, 0, 0, 0.18) !important; }
+#carteWebcam .carte-body div[style*="padding"] {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+}
+
+.data-ligne {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.data-ligne:last-child { border-bottom: none; }
+.data-ligne .label { color: rgba(255, 255, 255, 0.55) !important; }
+.data-ligne .valeur { font-weight: 500; color: #ffffff !important; }
