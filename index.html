@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="css/style.css?v=1.2">
 </head>
 <body>
+
 <div id="splash-screen">
     <div class="splash-content">
         <div class="splash-logo">🌊</div>
@@ -21,6 +22,7 @@
         <div class="splash-loader"></div>
     </div>
 </div>
+
 <header>
     <h1>🌊 Infos Nautiques</h1>
     <button id="homeBtn" class="home-btn" style="display:none;">🏠 Accueil</button>
@@ -73,15 +75,20 @@
 <script src="js/marine.js"></script>
 <script src="js/marees.js"></script>
 <script src="js/app.js"></script>
+
 <script>
-    // Attend que la page soit chargée
-    window.addEventListener('load', function() {
-        // Attend 1 seconde (1000 millisecondes)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Force la disparition de l'écran après exactement 1 seconde
         setTimeout(function() {
             const splash = document.getElementById('splash-screen');
-            splash.classList.add('splash-hidden');
+            if (splash) {
+                splash.classList.add('splash-hidden');
+            }
         }, 1000);
     });
 </script>
+
+</body>
+</html>
 </body>
 </html>
