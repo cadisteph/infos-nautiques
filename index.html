@@ -11,17 +11,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="#131c33">
     <meta name="apple-mobile-web-app-title" content="Nautique">
     
-    <link rel="stylesheet" href="css/style.css?v=1.2">
+    <link rel="stylesheet" href="css/style.css?v=1.3">
 </head>
 <body>
 
-<div id="splash-screen">
-    <div class="splash-content">
-        <div class="splash-logo">🌊</div>
-        <h1 class="splash-title">Infos Nautiques</h1>
-        <div class="splash-loader"></div>
-    </div>
-</div>
+<div id="splash-screen"></div>
 
 <header>
     <h1>🌊 Infos Nautiques</h1>
@@ -78,17 +72,21 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Force la disparition de l'écran après exactement 1 seconde
+        // Attente de 2000 millisecondes (2 secondes) avant de lancer la disparition
         setTimeout(function() {
             const splash = document.getElementById('splash-screen');
             if (splash) {
+                // Ajoute la classe CSS qui gère l'effet de fondu (fade out)
                 splash.classList.add('splash-hidden');
+                
+                // Supprime complètement l'élément du code après l'effet (0.5s de transition)
+                setTimeout(function() {
+                    splash.remove();
+                }, 500);
             }
-        }, 1000);
+        }, 2000);
     });
 </script>
 
-</body>
-</html>
 </body>
 </html>
