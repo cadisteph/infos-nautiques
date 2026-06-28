@@ -73,10 +73,10 @@
     function masquerSplash() {
         const splash = document.getElementById('splash-screen');
         if (splash) {
-            splash.style.transition = "opacity 0.5s ease-out, visibility 0.5s";
+            splash.style.transition = "opacity 1.5s ease-out, visibility 0.5s";
             splash.style.opacity = "0";
             splash.style.visibility = "hidden";
-            setTimeout(function() { splash.remove(); }, 500);
+            setTimeout(function() { splash.remove(); }, 1500);
         }
     }
     // Lance le compte à rebours de 4 secondes immédiatement
