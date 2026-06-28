@@ -73,6 +73,19 @@
 <script src="js/marine.js"></script>
 <script src="js/marees.js"></script>
 <script src="js/app.js"></script>
-
+<script>
+    // Sécurité absolue : on force le masquage dès que possible
+    function masquerSplash() {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.transition = "opacity 0.5s ease-out, visibility 0.5s";
+            splash.style.opacity = "0";
+            splash.style.visibility = "hidden";
+            setTimeout(function() { splash.remove(); }, 500);
+        }
+    }
+    // Lance le compte à rebours de 2 secondes immédiatement
+    setTimeout(masquerSplash, 2000);
+</script>
 </body>
 </html>
