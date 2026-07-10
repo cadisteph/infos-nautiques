@@ -30,15 +30,16 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
             console.log("Utilisation des coordonnées par défaut pour Le Havre");
         }
 
-        // 2. L'URL Open-Meteo Marine (Gratuite, sans clé, publique)
-        const tps = new Date().getTime();
-        const urlAPI = `https://marine-api.open-meteo.com/v1/marine?latitude=${latitude}&longitude=${longitude}&hourly=tide_predictions&timezone=Europe%2FParis&forecast_days=2&_=${tps}`;
+       // 2. L'URL Open-Meteo Marine (Nettoyée et configurée pour GitHub Pages)
+        const urlAPI = `https://marine-api.open-meteo.com/v1/marine?latitude=${latitude}&longitude=${longitude}&hourly=tide_predictions&timezone=Europe%2FParis&forecast_days=2`;
         
-        const response = await fetch(urlAPI);
-        if (!response.ok) throw new Error("Serveur météo indisponible");
+        const response = await fetch(urlAPI, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            mode: 'cors'
+        });
         
-        const data = await response.json();
-        if (!data.hourly || !data.hourly.tide_predictions) throw new Error("Pas de données de marée");
+        if (!response.ok) throw new Error(`Erreur serveur HTTP ${response.status}`);
 
         const tempsId = data.hourly.time;
         const hauteurs = data.hourly.tide_predictions;
