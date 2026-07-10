@@ -4,7 +4,7 @@
 // =======================================
 
 // 🔴 COLLE TA CLÉ API ENTRE LES GUILLEMETS ICI :
-const METEO_CONCEPT_TOKEN = 9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773; 
+const METEO_CONCEPT_TOKEN = "9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773"; 
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
     const body = carte.querySelector(".carte-body");
