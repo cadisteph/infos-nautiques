@@ -1,5 +1,5 @@
 // =======================================
-// INFOS NAUTIQUES - V6 FINALE ANTI-CACHE
+// INFOS NAUTIQUES - V7 OFFICIELLE SHOM GPS
 // js/marees.js — Données réelles Meteo-Concept
 // =======================================
 
@@ -16,30 +16,27 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
     const nomVilleAffiche = document.getElementById("nomVille").textContent.replace("📍 ", "").trim();
     
     try {
-        // 1. Récupération du code INSEE depuis ton JSON local
+        // 1. Récupération des coordonnées GPS depuis ton JSON local
         const rVilles = await fetch("data/villes.json");
         const liste = await rVilles.json();
         const vActuelle = liste.find(v => v.nom === nomVilleAffiche);
 
-        if (!vActuelle || !vActuelle.insee) {
-            throw new Error(`Code INSEE manquant dans villes.json pour ${nomVilleAffiche}`);
+        if (!vActuelle || !vActuelle.latitude || !vActuelle.longitude) {
+            throw new Error(`Coordonnées GPS manquantes dans villes.json pour ${nomVilleAffiche}`);
         }
 
-        const codeInsee = String(vActuelle.insee).padStart(5, '0');
-
-        // Astuce Anti-Cache : On ajoute l'heure actuelle en millisecondes à la fin de l'URL
-        // Cela force Chrome à aller chercher les vraies données à CHAQUE rafraîchissement.
+        // 2. La VRAIE URL officielle de Météo-Concept pour les marées du SHOM
+        // Elle prend la latitude et la longitude, et on ajoute un anti-cache automatique (_)
         const antiCache = new Date().getTime();
-        const urlMaree = `https://api.meteo-concept.com/api/marine/forecast?token=${METEO_CONCEPT_TOKEN}&insee=${codeInsee}&_=${antiCache}`;
+        const urlMaree = `https://api.meteo-concept.com/api/marine/tide?token=${METEO_CONCEPT_TOKEN}&lat=${vActuelle.latitude}&lon=${vActuelle.longitude}&_=${antiCache}`;
         
         const response = await fetch(urlMaree, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            mode: 'cors'
+            headers: { 'Accept': 'application/json' }
         });
 
         if (response.status === 403 || response.status === 401) {
-            throw new Error("Token Météo-Concept invalide ou non activé.");
+            throw new Error("Token Météo-Concept invalide, expiré ou non activé.");
         }
         if (!response.ok) {
             throw new Error(`Erreur serveur Météo-Concept (Code ${response.status})`);
@@ -47,31 +44,24 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
         
         const data = await response.json();
         
-        // Extraction des prévisions (forecast)
-        if (!data.forecast || data.forecast.length === 0) {
-            throw new Error("Aucune donnée marine disponible pour ce code INSEE.");
-        }
-
-        // Météo-Concept renvoie un tableau de prévisions par heure ou par tranche
-        // On récupère les informations de marée si disponibles dans le bloc shore/tide
-        const mareesSource = data.tide || (data.shore && data.shore.tide) || [];
-
-        if (mareesSource.length === 0) {
-            throw new Error("Données de marée spécifiques absentes de ce point côtier.");
+        // Structure officielle Météo-Concept : les marées sont directement dans un tableau "tide"
+        if (!data.tide || data.tide.length === 0) {
+            throw new Error("Aucune marée disponible pour ces coordonnées GPS.");
         }
 
         const maintenant = new Date();
         
-        // 3. Filtrage et tri chronologique
-        const prochainesMarees = mareesSource
+        // 3. Filtrage pour n'avoir que les prochaines marées
+        const prochainesMarees = data.tide
             .map(m => ({
-                type: (m.status === "Pleine mer" || m.type === "PM") ? "high" : "low",
-                t: new Date(m.dateTime || m.time),
+                type: (m.status === "Pleine mer" || m.status === "PM") ? "high" : "low",
+                t: new Date(m.dateTime),
                 h: m.height
             }))
             .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
             .slice(0, 4);
 
+        // Récupération du coefficient s'il existe dans la réponse
         const coeff = data.shore && data.shore.coefficient ? data.shore.coefficient : "--";
         const sensMaree = prochainesMarees[0]?.type === "high" ? "Montante ↑" : "Descendante ↓";
 
@@ -99,10 +89,10 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
                     <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:3px 8px; border-radius:4px; font-size:0.9rem; color:#ffffff;">Coeff ${coeff}</span>
                 </div>
                 <div class="maree-horaires" style="margin-top:12px;">
-                    ${lignesHtml || '<p class="non-dispo">Aucune marée proche trouvée dans les prévisions</p>'}
+                    ${lignesHtml || '<p class="non-dispo">Aucune marée proche trouvée</p>'}
                 </div>
                 <div style="text-align:right;margin-top:12px;font-size:0.7rem;color:rgba(255,255,255,0.4);">
-                    Source : SHOM Temps Réel (Force-Update)
+                    Source : Annuaire SHOM via Météo-Concept
                 </div>
             </div>
         `;
