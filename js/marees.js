@@ -1,5 +1,5 @@
 // =======================================
-// INFOS NAUTIQUES - V5.1 CORRIGÉE
+// INFOS NAUTIQUES - V5.2 FIX 404
 // js/marees.js — Données réelles Meteo-Concept
 // =======================================
 
@@ -25,16 +25,15 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
             throw new Error(`Code INSEE manquant dans villes.json pour ${nomVilleAffiche}`);
         }
 
-        // Force le code INSEE sur 5 caractères (ajoute un 0 au début si nécessaire)
         const codeInsee = String(vActuelle.insee).padStart(5, '0');
 
-        // 2. Appel à l'API avec configuration de sécurité
-        const urlMaree = `https://api.meteo-concept.com/api/marine/tide?token=${METEO_CONCEPT_TOKEN}&insee=${codeInsee}`;
+        // 2. Appel à la BONNE URL de l'API (/tide/ephemeride)
+        const urlMaree = `https://api.meteo-concept.com/api/marine/tide/ephemeride?token=${METEO_CONCEPT_TOKEN}&insee=${codeInsee}`;
         
         const response = await fetch(urlMaree, {
             method: 'GET',
             headers: { 'Accept': 'application/json' },
-            mode: 'cors' // Permet d'éviter le blocage de sécurité des navigateurs
+            mode: 'cors'
         });
 
         if (response.status === 403 || response.status === 401) {
@@ -46,7 +45,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
         
         const data = await response.json();
         if (!data.tide || data.tide.length === 0) {
-            throw new Error("Aucune marée disponible pour ce code INSEE (ville non côtière ?)");
+            throw new Error("Aucune marée disponible pour ce code INSEE.");
         }
 
         const maintenant = new Date();
