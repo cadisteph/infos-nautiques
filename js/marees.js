@@ -1,10 +1,10 @@
 // =======================================
-// INFOS NAUTIQUES - V5 OFFICIELLE SHOM
+// INFOS NAUTIQUES - V5.1 CORRIGÉE
 // js/marees.js — Données réelles Meteo-Concept
 // =======================================
 
-// 🔴 COLLE TA CLÉ API ENTRE LES GUILLEMETS ICI :
-const METEO_CONCEPT_TOKEN = "9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773";
+const METEO_CONCEPT_TOKEN = "9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773"; 
+
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
     const body = carte.querySelector(".carte-body");
 
@@ -16,44 +16,54 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
     const nomVilleAffiche = document.getElementById("nomVille").textContent.replace("📍 ", "").trim();
     
     try {
-        // 1. On récupère le code INSEE de la ville
+        // 1. Récupération du code INSEE
         const rVilles = await fetch("data/villes.json");
         const liste = await rVilles.json();
         const vActuelle = liste.find(v => v.nom === nomVilleAffiche);
 
         if (!vActuelle || !vActuelle.insee) {
-            throw new Error("Code INSEE manquant dans villes.json pour " + nomVilleAffiche);
+            throw new Error(`Code INSEE manquant dans villes.json pour ${nomVilleAffiche}`);
         }
 
-        // 2. Appel à l'API officielle Météo-Concept (Données SHOM)
-        const urlMaree = `https://api.meteo-concept.com/api/marine/tide?token=${METEO_CONCEPT_TOKEN}&insee=${vActuelle.insee}`;
+        // Force le code INSEE sur 5 caractères (ajoute un 0 au début si nécessaire)
+        const codeInsee = String(vActuelle.insee).padStart(5, '0');
+
+        // 2. Appel à l'API avec configuration de sécurité
+        const urlMaree = `https://api.meteo-concept.com/api/marine/tide?token=${METEO_CONCEPT_TOKEN}&insee=${codeInsee}`;
         
-        const response = await fetch(urlMaree);
-        if (!response.ok) throw new Error("Clé API invalide ou serveur injoignable");
+        const response = await fetch(urlMaree, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            mode: 'cors' // Permet d'éviter le blocage de sécurité des navigateurs
+        });
+
+        if (response.status === 403 || response.status === 401) {
+            throw new Error("Token Météo-Concept invalide ou non activé.");
+        }
+        if (!response.ok) {
+            throw new Error(`Erreur serveur Météo-Concept (Code ${response.status})`);
+        }
         
         const data = await response.json();
-        
-        if (!data.tide) throw new Error("Pas de données de marée reçues");
+        if (!data.tide || data.tide.length === 0) {
+            throw new Error("Aucune marée disponible pour ce code INSEE (ville non côtière ?)");
+        }
 
         const maintenant = new Date();
         
-        // 3. Filtrer et trier les marées pour n'afficher que les prochaines
+        // 3. Filtrage et tri
         const prochainesMarees = data.tide
             .map(m => ({
                 type: m.status === "Pleine mer" ? "high" : "low",
                 t: new Date(m.dateTime),
                 h: m.height
             }))
-            .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000)) // Garde les récentes et futures
+            .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
             .slice(0, 4);
 
-        // Récupération du coefficient du jour
         const coeff = data.shore && data.shore.coefficient ? data.shore.coefficient : "--";
-        
-        // Détermination du sens du courant (si la prochaine marée est une pleine mer, ça monte !)
         const sensMaree = prochainesMarees[0]?.type === "high" ? "Montante ↑" : "Descendante ↓";
 
-        // Construction des lignes HTML
         const lignesHtml = prochainesMarees.map(e => {
             const estPassee = e.t < maintenant;
             const label = e.type === "high"
@@ -71,7 +81,6 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
                 </div>`;
         }).join("");
 
-        // Affichage final sur l'écran
         body.innerHTML = `
             <div style="width:100%">
                 <div class="maree-statut" style="display:flex; gap:10px; margin-bottom:12px;">
@@ -88,11 +97,13 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
         `;
 
     } catch (error) {
-        console.error("Erreur API Marées :", error);
+        console.error("Détail de l'erreur :", error);
         body.innerHTML = `
-            <div style="width:100%; text-align:center; padding:15px;">
-                <p style="color:#f87171; font-weight:bold; margin-bottom:4px;">❌ Connexion SHOM impossible</p>
-                <p style="font-size:0.75rem; color:rgba(255,255,255,0.5);">Vérifie ta clé API dans js/marees.js ou ta connexion internet.</p>
+            <div style="width:100%; text-align:center; padding:10px;">
+                <p style="color:#f87171; font-weight:bold; margin-bottom:4px;">❌ Liaison SHOM interrompue</p>
+                <p style="font-size:0.8rem; color:rgba(255,255,255,0.6); background:rgba(0,0,0,0.2); padding:6px; border-radius:4px; word-break:break-word;">
+                    ${error.message}
+                </p>
             </div>`;
     }
 }
