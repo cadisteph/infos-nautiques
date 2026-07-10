@@ -1,7 +1,9 @@
 // =======================================
-// INFOS NAUTIQUES - V8 FONCTIONNELLE
-// js/marees.js — Données Open-Meteo Réelles
+// INFOS NAUTIQUES - V9 CORRIGÉE (VRAIE DOC)
+// js/marees.js — Données réelles Meteo-Concept
 // =======================================
+
+const METEO_CONCEPT_TOKEN = "9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773"; 
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
     const body = carte.querySelector(".carte-body");
@@ -14,69 +16,76 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
     const nomVilleAffiche = document.getElementById("nomVille").textContent.replace("📍 ", "").trim();
     
     try {
-        // 1. Coordonnées de secours si villes.json ne charge pas, ou lecture du JSON
-        let latitude = 49.4938;  // Par défaut Le Havre
-        let longitude = 0.1077;
+        // 1. Récupération du code INSEE
+        const rVilles = await fetch("data/villes.json");
+        const liste = await rVilles.json();
+        const vActuelle = liste.find(v => v.nom === nomVilleAffiche);
 
-        try {
-            const rVilles = await fetch("data/villes.json");
-            const liste = await rVilles.json();
-            const vActuelle = liste.find(v => v.nom === nomVilleAffiche);
-            if (vActuelle) {
-                latitude = vActuelle.latitude;
-                longitude = vActuelle.longitude;
-            }
-        } catch (e) {
-            console.log("Utilisation des coordonnées par défaut pour Le Havre");
+        if (!vActuelle || !vActuelle.insee) {
+            throw new Error(`Code INSEE manquant dans villes.json pour ${nomVilleAffiche}`);
         }
 
-       // 2. L'URL Open-Meteo Marine épurée
-        const urlAPI = `https://marine-api.open-meteo.com/v1/marine?latitude=${latitude}&longitude=${longitude}&hourly=tide_predictions&timezone=Europe%2FParis&forecast_days=2`;
-        
-        // Appel direct sans entêtes restrictifs
-        const response = await fetch(urlAPI);
-        
-        if (!response.ok) throw new Error(`Erreur serveur HTTP ${response.status}`);
-        const tempsId = data.hourly.time;
-        const hauteurs = data.hourly.tide_predictions;
+        const codeInsee = String(vActuelle.insee).padStart(5, '0');
         const maintenant = new Date();
-        const extrema = [];
+        const maréesCumulées = [];
 
-        // 3. Calcul des pics (Pleine mer) et creux (Basse mer)
-        for (let i = 1; i < hauteurs.length - 1; i++) {
-            const hPrecedente = hauteurs[i - 1];
-            const hActuelle    = hauteurs[i];
-            const hSuivante   = hauteurs[i + 1];
-            const dateHeure    = new Date(tempsId[i]);
+        // 2. On appelle l'API Éphéméride pour Aujourd'hui (0) et Demain (1)
+        for (let jour = 0; jour <= 1; jour++) {
+            const url = `https://api.meteo-concept.com/api/ephemeride/${jour}?token=${METEO_CONCEPT_TOKEN}&insee=${codeInsee}`;
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Si la ville a des marées fournies par le SHOM
+                if (data.ephemeride && data.ephemeride.tide) {
+                    data.ephemeride.tide.forEach(m => {
+                        // Reconstitution d'une date propre pour le tri
+                        const [heures, minutes] = m.time.split(':');
+                        const dateMarée = new Date(maintenant);
+                        if (jour === 1) dateMarée.setDate(dateMarée.getDate() + 1);
+                        dateMarée.setHours(parseInt(heures), parseInt(minutes), 0, 0);
 
-            if (dateHeure >= new Date(maintenant.getTime() - 2 * 3600000)) {
-                if (hActuelle > hPrecedente && hActuelle > hSuivante) {
-                    extrema.push({ type: "high", t: dateHeure, h: hActuelle });
-                } else if (hActuelle < hPrecedente && hActuelle < hSuivante) {
-                    extrema.push({ type: "low", t: dateHeure, h: hActuelle });
+                        maréesCumulées.push({
+                            type: m.status === "Pleine mer" ? "high" : "low",
+                            t: dateMarée,
+                            coeff: m.coefficient || "--"
+                        });
+                    });
                 }
             }
         }
 
-        extrema.sort((a, b) => a.t - b.t);
-        const prochains4 = extrema.slice(0, 4);
+        if (maréesCumulées.length === 0) {
+            throw new Error("Aucune marée disponible pour cette commune.");
+        }
 
-        if (prochains4.length === 0) throw new Error("Aucune marée trouvée");
+        // 3. Filtrage et tri chronologique (on garde les marées futures ou très récentes)
+        const prochainesMarees = maréesCumulées
+            .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
+            .sort((a, b) => a.t - b.t)
+            .slice(0, 4);
 
-        const sensMaree = prochains4[0].type === "high" ? "Montante ↑" : "Descendante ↓";
+        // Récupération du coefficient actuel
+        const coeffActuel = prochainesMarees[0]?.coeff || "--";
+        const sensMaree = prochainesMarees[0]?.type === "high" ? "Montante ↑" : "Descendante ↓";
 
-        const lignesHtml = prochains4.map(e => {
+        const lignesHtml = prochainesMarees.map(e => {
             const estPassee = e.t < maintenant;
             const label = e.type === "high"
                 ? `<span style="color:#38bdf8; font-weight:bold;">▲ Pleine mer</span>`
                 : `<span style="color:#fdba74; font-weight:bold;">▼ Basse mer</span>`;
             
-            const heureFormatee = e.t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+            const heureFormatee = e.t.toLocaleTimeString("fr-FR", {
+                hour: "2-digit", minute: "2-digit"
+            });
+
+            // Note : l'API éphéméride donne les heures et coefficients, mais pas la hauteur en mètres
+            const infoCoeff = e.type === "high" ? ` — Coeff ${e.coeff}` : "";
 
             return `
-                <div class="data-ligne" style="padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; ${estPassee ? "opacity:0.4;" : ""}">
-                    <span class="label">${label}</span>
-                    <span class="valeur" style="font-weight: 500; color: #ffffff;">${heureFormatee} — ${e.h.toFixed(2)} m</span>
+                <div class="data-ligne" style="padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; ${estPassee ? "opacity:0.4; font-style:italic;" : ""}">
+                    <span class="label">${label} ${estPassee ? "(récente)" : ""}</span>
+                    <span class="valeur" style="font-weight: 500; color: #ffffff;">${heureFormatee}${infoCoeff}</span>
                 </div>`;
         }).join("");
 
@@ -84,19 +93,25 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
             <div style="width:100%">
                 <div class="maree-statut" style="display:flex; gap:10px; margin-bottom:12px;">
                     <span style="background:#0284c7; color:#ffffff; padding:3px 8px; border-radius:4px; font-weight:bold; display:inline-block;">${sensMaree}</span>
-                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:3px 8px; border-radius:4px; font-size:0.9rem; color:#ffffff;">Temps Réel</span>
+                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:3px 8px; border-radius:4px; font-size:0.9rem; color:#ffffff;">Coeff global : ${coeffActuel}</span>
                 </div>
                 <div class="maree-horaires" style="margin-top:12px;">
                     ${lignesHtml}
+                </div>
+                <div style="text-align:right;margin-top:12px;font-size:0.7rem;color:rgba(255,255,255,0.4);">
+                    Source : SHOM / Météo-Concept Ephemeride
                 </div>
             </div>
         `;
 
     } catch (error) {
+        console.error("Détail de l'erreur :", error);
         body.innerHTML = `
             <div style="width:100%; text-align:center; padding:10px;">
-                <p style="color:#f87171; font-weight:bold; margin-bottom:4px;">❌ Données indisponibles</p>
-                <p style="font-size:0.75rem; color:rgba(255,255,255,0.5);">${error.message}</p>
+                <p style="color:#f87171; font-weight:bold; margin-bottom:4px;">❌ Liaison SHOM interrompue</p>
+                <p style="font-size:0.8rem; color:rgba(255,255,255,0.6); background:rgba(0,0,0,0.2); padding:6px; border-radius:4px; word-break:break-word;">
+                    ${error.message}
+                </p>
             </div>`;
     }
 }
