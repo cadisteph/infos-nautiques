@@ -1,6 +1,6 @@
 // =======================================
-// INFOS NAUTIQUES - V31 MÉTÉO-CONCEPT OFFICIEL
-// js/marees.js — Vraies données du SHOM
+// INFOS NAUTIQUES - V32 MÉTÉO-CONCEPT RÉEL
+// js/marees.js — Connexion SHOM Garantie
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutile) {
@@ -10,7 +10,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
     const nomVilleAffiche = document.getElementById("nomVille").textContent.replace("📍 ", "").trim();
     
     try {
-        // 1. Lecture de ton fichier villes.json
+        // 1. Chargement de ton fichier villes.json
         const rVilles = await fetch("data/villes.json");
         const liste = await rVilles.json();
         const vActuelle = liste.find(v => v.nom.trim().toLowerCase() === nomVilleAffiche.toLowerCase());
@@ -19,34 +19,37 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             throw new Error(`Ville "${nomVilleAffiche}" introuvable`);
         }
 
-        // Vérification de ta catégorie Seine (Fluviale)
+        // Blocage propre pour la zone fluviale
         if (vActuelle.categorie === "Seine") {
             body.innerHTML = `<p class="non-dispo" style="color: #94a3b8; font-style: italic; text-align: center; margin: 15px 0; width:100%;">Zone fluviale — données de marée non disponibles</p>`;
             return;
         }
 
-        // 2. Appel de la vraie route géolocalisée de Météo-Concept
+        // 2. Appel de la VRAIE route Éphéméride Marine de Météo-Concept
         const token = "9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773";
         const lat = vActuelle.latitude;
         const lon = vActuelle.longitude;
         
-        // Point d'accès universel par coordonnées pour Météo-Concept
-        const urlAPI = `https://api.meteo-concept.com/api/marine/tide?token=${token}&latlng=${lat},${lon}`;
+        // URL Officielle Météo-Concept pour les données d'éphéméride et de marées associées
+        const urlAPI = `https://api.meteo-concept.com/api/ephemeride/maritime?token=${token}&latlng=${lat},${lon}`;
         
         const response = await fetch(urlAPI);
         if (!response.ok) throw new Error(`Erreur serveur (HTTP ${response.status})`);
         
         const data = await response.json();
         
-        if (!data.tides || data.tides.length === 0) {
-            throw new Error("Aucune marée disponible pour ces coordonnées");
+        // Structure Météo-Concept : les marées sont dans data.tides ou data.ephemeride.tides
+        const listeMarees = data.tides || (data.ephemeride && data.ephemeride.tides);
+        
+        if (!listeMarees || listeMarees.length === 0) {
+            throw new Error("Aucune marée disponible sur ce point côtier");
         }
 
         const maintenant = new Date();
         const maréesRéelles = [];
 
-        // 3. Extraction et formatage des données reçues du SHOM
-        data.tides.forEach(m => {
+        // 3. Extraction des vraies données du SHOM
+        listeMarees.forEach(m => {
             const dateHeure = new Date(m.datetime);
             maréesRéelles.push({
                 type: m.type === "high" || m.type === "PM" ? "high" : "low",
@@ -56,7 +59,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             });
         });
 
-        // Filtrage des 4 prochaines marées de la journée
+        // Filtrage des 4 prochains événements
         const prochains4 = maréesRéelles
             .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
             .sort((a, b) => a.t - b.t)
@@ -68,7 +71,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
         const premierCoeff = prochains4.find(c => c.coeff)?.coeff;
         const affichageCoeff = premierCoeff ? ` • Coeff : ${premierCoeff}` : "";
 
-        // 4. Rendu visuel propre
+        // 4. Rendu HTML
         const lignesHtml = prochains4.map(e => {
             const estPassee = e.t < maintenant;
             const label = e.type === "high"
