@@ -4,114 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infos Nautiques</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #1e293b;
-            color: #f8fafc;
-            padding: 20px;
-            margin: 0;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .header {
-            margin-bottom: 20px;
-        }
-        h1 {
-            font-size: 1.8rem;
-            margin: 0 0 4px 0;
-        }
-        .maj {
-            font-size: 0.9rem;
-            color: #94a3b8;
-        }
-        .carte {
-            background-color: #0f172a;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-        .carte-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-top: 0;
-            margin-bottom: 16px;
-            color: #ffffff;
-        }
-        .meteo-actuelle {
-            font-size: 3rem;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        .meteo-desc {
-            color: #94a3b8;
-            margin-bottom: 20px;
-        }
-        .meteo-heures {
-            display: flex;
-            gap: 20px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-        }
-        .heure-bloc {
-            text-align: center;
-            min-width: 50px;
-        }
-        .heure-txt { color: #94a3b8; font-size: 0.85rem; }
-        .heure-temp { font-weight: bold; margin-top: 5px; }
-        .data-ligne {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .valeur { color: #ffffff; font-weight: 500; }
-    </style>
+    
+    <link rel="manifest" href="manifest.json">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#131c33">
+    <meta name="apple-mobile-web-app-title" content="Nautique">
+    <!-- TON NOUVEAU LOGO IPHONE EST ICI : -->
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+    
+    <link rel="stylesheet" href="css/style.css?v=1.2">
 </head>
 <body>
+<div id="splash-screen">
+</div>
+<header>
+    <h1>🌊 Infos Nautiques</h1>
+    <button id="homeBtn" class="home-btn" style="display:none;">🏠 Accueil</button>
+</header>
 
-    <div class="container">
-        
-        <div class="header">
-            <h1 id="nomVille">📍 Le Havre</h1>
-            <div class="maj">Mis à jour à 17:38</div>
-        </div>
+<main>
+    <section id="accueil">
+        <div id="listeVilles"></div>
+    </section>
 
-        <div class="carte" id="carteMeteo">
-            <div class="carte-title">☀️ MÉTÉO</div>
-            <div class="meteo-actuelle">31°</div>
-            <div class="meteo-desc">Principalement dégagé</div>
-            
-            <div class="meteo-heures">
-                <div class="heure-bloc"><div class="heure-txt">17 h</div>☀️<div class="heure-temp">32°</div></div>
-                <div class="heure-bloc"><div class="heure-txt">18 h</div>☀️<div class="heure-temp">31°</div></div>
-                <div class="heure-bloc"><div class="heure-txt">19 h</div>☀️<div class="heure-temp">30°</div></div>
-                <div class="heure-bloc"><div class="heure-txt">20 h</div>☀️<div class="heure-temp">29°</div></div>
-                <div class="heure-bloc"><div class="heure-txt">21 h</div>☀️<div class="heure-temp">28°</div></div>
-                <div class="heure-bloc"><div class="heure-txt">22 h</div>🌙<div class="heure-temp">27°</div></div>
+    <section id="pageVille" style="display:none;">
+        <h2 id="nomVille"></h2>
+        <div id="updateTime" class="update-time"></div>
+
+        <div class="cartes">
+            <div class="carte" id="carteMeteo">
+                <h3>☀️ MÉTÉO</h3>
+                <div class="carte-body"><span class="loader"></span></div>
+            </div>
+
+            <div class="carte" id="carteVent">
+                <h3>💨 VENT</h3>
+                <div class="carte-body"><span class="loader"></span></div>
+            </div>
+
+            <div class="carte" id="carteHoule">
+                <h3>🌊 HOULE</h3>
+                <div class="carte-body"><span class="loader"></span></div>
+            </div>
+
+            <div class="carte" id="carteMaree">
+                <h3>🌊 MARÉE</h3>
+                <div class="carte-body"><span class="loader"></span></div>
+            </div>
+
+            <div class="carte" id="carteWebcam">
+                <h3>📷 WEBCAMS</h3>
+                <div class="carte-body">
+                    <p class="dev-note">En cours de développement</p>
+                </div>
             </div>
         </div>
 
-        <div class="carte" id="carteMaree">
-            <div class="carte-title">🌊 MARÉE</div>
-            <div class="carte-body">
-                <p style="color: rgba(255,255,255,0.5);">Calcul des horaires...</p>
-            </div>
-        </div>
+        <button id="retour" class="retour-btn">⬅ Retour</button>
+    </section>
+</main>
 
-    </div>
-
-    <script src="js/marees.js?v=15"></script>
-    <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            const carte = document.getElementById('carteMaree');
-            if (typeof calcularEtAfficherMarees === 'function') {
-                calculerEtAfficherMarees(carte, null, true);
-            }
-        });
-    </script>
+<script src="js/utils.js"></script>
+<script src="js/meteo.js"></script>
+<script src="js/marine.js"></script>
+<script src="js/marees.js"></script>
+<script src="js/app.js"></script>
+<script>
+    // Sécurité absolue : on force le masquage dès que possible
+    function masquerSplash() {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.transition = "opacity 1.5s ease-out, visibility 0.5s";
+            splash.style.opacity = "0";
+            splash.style.visibility = "hidden";
+            setTimeout(function() { splash.remove(); }, 1500);
+        }
+    }
+    // Lance le compte à rebours de 3 secondes immédiatement
+    setTimeout(masquerSplash, 3000);
+</script>
 </body>
 </html>
