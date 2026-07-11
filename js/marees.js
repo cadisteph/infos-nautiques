@@ -1,6 +1,6 @@
 // =======================================
-// INFOS NAUTIQUES - AUTOMATISATION CORRIGÉE
-// js/marees.js — Flux Océanique Direct
+// INFOS NAUTIQUES - AUTOMATISATION MONDIALE
+// js/marees.js — Service CO-OPS sans clé
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutile) {
@@ -19,52 +19,59 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             throw new Error(`Ville "${nomVilleAffiche}" introuvable`);
         }
 
-        // Sécurité zone fluviale
+        // Sécurité zone fluviale (Seine)
         if (vActuelle.categorie === "Seine") {
             body.innerHTML = `<p class="non-dispo" style="color: #94a3b8; font-style: italic; text-align: center; margin: 15px 0; width:100%;">Zone fluviale — données de marée non disponibles</p>`;
             return;
         }
 
-        // 2. URL officielle et vérifiée du serveur de test Open-Meteo Marine
+        // 2. Préparation des dates dynamiques (Aujourd'hui et Demain)
+        const maintenant = new Date();
+        const demain = new Date(maintenant.getTime() + 24 * 3600 * 1000);
+        
+        const formatDate = (d) => d.toISOString().split('T')[0].replace(/-/g, '');
+        const dateDebut = formatDate(maintenant);
+        const dateFin = formatDate(demain);
+
+        // 3. Appel de l'API Océanique CO-OPS (Service public international, sans clé)
+        // Calé sur les coordonnées GPS précises de ta ville normande
         const lat = vActuelle.latitude;
         const lon = vActuelle.longitude;
-        const urlAPI = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=tide_predictions&timezone=Europe%2FParis`;
-        
+        const urlAPI = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?begin_date=${dateDebut}&end_date=${dateFin}&lat=${lat}&lon=${lon}&product=predictions&datum=MLLW&units=metric&time_zone=lst_ldt&format=json&interval=hilo`;
+
         const response = await fetch(urlAPI);
-        if (!response.ok) throw new Error(`Serveur injoignable (HTTP ${response.status})`);
+        if (!response.ok) throw new Error(`Serveur océanique indisponible (HTTP ${response.status})`);
         
         const data = await response.json();
-        if (!data.hourly || !data.hourly.tide_predictions) throw new Error("Données indisponibles");
-
-        const temps = data.hourly.time;
-        const hauteurs = data.hourly.tide_predictions;
-        const maintenant = new Date();
-        const maréesRéelles = [];
-
-        // 3. Extraction des pics et creux
-        for (let i = 1; i < hauteurs.length - 1; i++) {
-            const hPrecedente = hauteurs[i - 1];
-            const hActuelle    = hauteurs[i];
-            const hSuivante   = hauteurs[i + 1];
-            const dateHeure    = new Date(temps[i]);
-
-            if (dateHeure >= new Date(maintenant.getTime() - 2 * 3600000)) {
-                if (hActuelle > hPrecedente && hActuelle > hSuivante) {
-                    maréesRéelles.push({ type: "high", t: dateHeure, h: hActuelle });
-                } else if (hActuelle < hPrecedente && hActuelle < hSuivante) {
-                    maréesRéelles.push({ type: "low", t: dateHeure, h: hActuelle });
-                }
-            }
+        
+        if (!data.predictions || data.predictions.length === 0) {
+            throw new Error("Pas de données pour cette zone côtière");
         }
 
-        maréesRéelles.sort((a, b) => a.t - b.t);
-        const prochains4 = maréesRéelles.slice(0, 4);
+        const maréesRéelles = [];
 
-        if (prochains4.length === 0) throw new Error("Aucun horaire trouvé");
+        // 4. Extraction des données (H = High/Pleine Mer, L = Low/Basse Mer)
+        data.predictions.forEach(m => {
+            // Le format de date renvoyé est "YYYY-MM-DD HH:MM"
+            const dateFormatee = m.t.replace(/-/g, '/'); 
+            maréesRéelles.push({
+                type: m.type === "H" ? "high" : "low",
+                t: new Date(dateFormatee),
+                h: parseFloat(m.v)
+            });
+        });
+
+        // Filtrage des 4 prochaines marées (-2h dans le passé)
+        const prochains4 = maréesRéelles
+            .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
+            .sort((a, b) => a.t - b.t)
+            .slice(0, 4);
+
+        if (prochains4.length === 0) throw new Error("Aucun horaire proche trouvé");
 
         const sensMaree = prochains4[0].type === "high" ? "Montante ↑" : "Descendante ↓";
 
-        // 4. Rendu HTML
+        // 5. Rendu HTML
         const lignesHtml = prochains4.map(e => {
             const estPassee = e.t < maintenant;
             const label = e.type === "high"
@@ -84,7 +91,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             <div style="width:100%">
                 <div class="maree-statut" style="display:flex; gap:10px; margin-bottom:12px;">
                     <span style="background:#0284c7; color:#ffffff; padding:4px 10px; border-radius:6px; font-weight:bold; display:inline-block; font-size:0.9rem;">${sensMaree}</span>
-                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:6px; font-size:0.9rem; color:#ffffff; font-weight:500;">Météo Océanique</span>
+                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:6px; font-size:0.9rem; color:#ffffff; font-weight:500;">Données Océaniques Globales</span>
                 </div>
                 <div class="maree-horaires" style="margin-top:12px; width:100%;">
                     ${lignesHtml}
