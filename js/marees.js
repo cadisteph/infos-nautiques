@@ -1,72 +1,80 @@
 // =======================================
-// INFOS NAUTIQUES - V26 DIRECT SANS CLÉ
-// js/marees.js — Données réelles de marées
+// INFOS NAUTIQUES - VERSION MÉTÉO-CONCEPT & SHOM
+// js/marees.js — Données Officielles Littoral 76
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutile) {
     const body = carte.querySelector(".carte-body");
     if (!body) return;
 
+    // Récupération propre du nom de la ville sélectionnée dans ton interface
     const nomVilleAffiche = document.getElementById("nomVille").textContent.replace("📍 ", "").trim();
     
     try {
-        // 1. Lecture de ton fichier villes.json
+        // 1. Chargement de ton fichier villes.json
         const rVilles = await fetch("data/villes.json");
         const liste = await rVilles.json();
+        
+        // Recherche stricte de la ville correspondante
         const vActuelle = liste.find(v => v.nom.trim().toLowerCase() === nomVilleAffiche.toLowerCase());
 
         if (!vActuelle) {
-            throw new Error(`Ville "${nomVilleAffiche}" introuvable`);
+            throw new Error(`Ville "${nomVilleAffiche}" introuvable dans data/villes.json`);
         }
 
-        // Vérification de ta catégorie Seine (Fluviale)
+        // Vérification de la catégorie : si c'est la Seine, on bloque proprement
         if (vActuelle.categorie === "Seine") {
             body.innerHTML = `<p class="non-dispo" style="color: #94a3b8; font-style: italic; text-align: center; margin: 15px 0; width:100%;">Zone fluviale — données de marée non disponibles</p>`;
             return;
         }
 
-        // 2. Appel de l'API Marine Mondiale (Sans clé, gratuite et sans blocage)
+        // 2. Appel de l'API Météo-Concept (Données officielles SHOM) via coordonnées GPS
         const lat = vActuelle.latitude;
         const lon = vActuelle.longitude;
-        const urlAPI = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=tide_predictions&timezone=Europe%2FParis`;
+        const token = "9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773";
+        
+        // Requête sur le point de marée le plus proche des coordonnées fournies
+        const urlAPI = `https://api.meteo-concept.com/api/marine/tide?token=${token}&latlng=${lat},${lon}`;
         
         const response = await fetch(urlAPI);
-        if (!response.ok) throw new Error(`Serveur injoignable (HTTP ${response.status})`);
+        if (!response.ok) throw new Error(`Serveur Météo-Concept indisponible (HTTP ${response.status})`);
         
         const data = await response.json();
-        if (!data.hourly || !data.hourly.tide_predictions) throw new Error("Données indisponibles sur cette zone");
+        
+        // Vérification du format des données renvoyées par Météo-Concept
+        if (!data.tides || data.tides.length === 0) {
+            throw new Error("Aucune marée disponible pour ces coordonnées GPS");
+        }
 
-        const temps = data.hourly.time;
-        const hauteurs = data.hourly.tide_predictions;
         const maintenant = new Date();
         const maréesRéelles = [];
 
-        // 3. Détection des extrêmes réels (pics et creux fournis par l'API)
-        for (let i = 1; i < hauteurs.length - 1; i++) {
-            const hPrecedente = hauteurs[i - 1];
-            const hActuelle    = hauteurs[i];
-            const hSuivante   = hauteurs[i + 1];
-            const dateHeure    = new Date(temps[i]);
+        // 3. Extraction des marées (Météo-Concept fournit directement les pleines et basses mers précalculées)
+        data.tides.forEach(m => {
+            const dateHeure = new Date(m.datetime);
+            maréesRéelles.push({
+                type: m.type === "high" || m.type === "PM" ? "high" : "low",
+                t: dateHeure,
+                h: m.height,
+                coeff: m.coefficient || null
+            });
+        });
 
-            // Filtrage des événements proches (-2h dans le passé à +24h)
-            if (dateHeure >= new Date(maintenant.getTime() - 2 * 3600000)) {
-                if (hActuelle > hPrecedente && hActuelle > hSuivante) {
-                    maréesRéelles.push({ type: "high", t: dateHeure, h: hActuelle });
-                } else if (hActuelle < hPrecedente && hActuelle < hSuivante) {
-                    maréesRéelles.push({ type: "low", t: dateHeure, h: hActuelle });
-                }
-            }
-        }
+        // Filtrage pour garder les événements pertinents (de -2h dans le passé à +24h dans le futur)
+        const prochains4 = maréesRéelles
+            .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
+            .sort((a, b) => a.t - b.t)
+            .slice(0, 4);
 
-        // Tri chronologique
-        maréesRéelles.sort((a, b) => a.t - b.t);
-        const prochains4 = maréesRéelles.slice(0, 4);
-
-        if (prochains4.length === 0) throw new Error("Aucun horaire trouvé");
+        if (prochains4.length === 0) throw new Error("Aucun horaire proche trouvé");
 
         const sensMaree = prochains4[0].type === "high" ? "Montante ↑" : "Descendante ↓";
+        
+        // Recherche d'un coefficient valide dans les prochaines marées pour l'afficher si dispo
+        const premierCoeff = prochains4.find(c => c.coeff)?.coeff;
+        const affichageCoeff = premierCoeff ? ` • Coeff : ${premierCoeff}` : "";
 
-        // 4. Affichage HTML propre
+        // 4. Rendu HTML
         const lignesHtml = prochains4.map(e => {
             const estPassee = e.t < maintenant;
             const label = e.type === "high"
@@ -74,10 +82,11 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
                 : `<span style="color:#fdba74; font-weight:bold;">▼ Basse mer</span>`;
             
             const heureFormatee = e.t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+            const detailCoeff = e.coeff ? ` (Coeff ${e.coeff})` : "";
 
             return `
                 <div class="data-ligne" style="width:100%; display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${estPassee ? "opacity:0.4; font-style:italic;" : ""}">
-                    <span class="label">${label} ${estPassee ? "(récente)" : ""}</span>
+                    <span class="label">${label} ${estPassee ? "(récente)" : ""}${detailCoeff}</span>
                     <span class="valeur" style="color: #ffffff; font-weight: 500;">${heureFormatee} — ${e.h.toFixed(2)} m</span>
                 </div>`;
         }).join("");
@@ -86,7 +95,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             <div style="width:100%">
                 <div class="maree-statut" style="display:flex; gap:10px; margin-bottom:12px;">
                     <span style="background:#0284c7; color:#ffffff; padding:4px 10px; border-radius:6px; font-weight:bold; display:inline-block; font-size:0.9rem;">${sensMaree}</span>
-                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:6px; font-size:0.9rem; color:#ffffff; font-weight:500;">Données Réelles</span>
+                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:6px; font-size:0.9rem; color:#ffffff; font-weight:500;">SHOM / Météo-Concept${affichageCoeff}</span>
                 </div>
                 <div class="maree-horaires" style="margin-top:12px; width:100%;">
                     ${lignesHtml}
