@@ -1,6 +1,6 @@
 // =======================================
-// INFOS NAUTIQUES - EXTRACTEUR TEXTUEL ROBUSTE
-// js/marees.js — 100% Dynamique & Perpétuel
+// INFOS NAUTIQUES - EXTRACTEUR DE TEXTE WIDGET
+// js/marees.js — Extraction PM/BM/Coeff uniquement
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutile) {
@@ -22,7 +22,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             return;
         }
 
-        // 2. Dictionnaire des ports fournis
+        // 2. Correspondance des ports
         const correspondancePorts = {
             "le havre": "19",
             "étretat": "17",
@@ -41,42 +41,41 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             return;
         }
 
-        // 3. Récupération de la page épurée (format imprimable/mobile) via le proxy CORS
-        const urlCible = `https://maree.info/${numPort}`;
-        const urlProxy = `https://corsproxy.io/?${encodeURIComponent(urlCible)}`;
+        // 3. Appel du flux de données épuré (format d'impression sans fioritures) via le proxy
+        const urlWidget = `https://maree.info/${numPort}?d=ajax&m=1`;
+        const urlProxy = `https://corsproxy.io/?${encodeURIComponent(urlWidget)}`;
 
         const response = await fetch(urlProxy);
-        if (!response.ok) throw new Error("Serveur distant injoignable");
-        
-        const html = await response.text();
+        if (!response.ok) throw new Error("Erreur réseau");
+        const htmlText = await response.text();
 
-        // 4. Analyse de la page
+        // 4. Extraction chirurgicale des données
         const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
+        const doc = parser.parseFromString(htmlText, "text/html");
         
-        // On cible le tableau principal des marées du jour
-        const lignes = doc.querySelectorAll("#tide-curr tr, #tide-days tr, .tide-day tr");
-        const maréesRéelles = [];
+        // On récupère toutes les cellules du tableau de données de maree.info
+        const cellules = doc.querySelectorAll("table td, div.tide-row, tr");
+        const maréesTrouvées = [];
         const maintenant = new Date();
 
-        lignes.forEach(tr => {
-            const texteLigne = tr.textContent.toUpperCase();
-            // On cherche uniquement les lignes contenant explicitement PM ou BM
-            if (texteLigne.includes("PM") || texteLigne.includes("BM") || texteLigne.includes("PLEINE") || texteLigne.includes("BASSE")) {
-                const type = (texteLigne.includes("PM") || texteLigne.includes("PLEINE")) ? "PM" : "BM";
+        cellules.forEach(el => {
+            const texte = el.textContent.trim().toUpperCase();
+            // Recherche des lignes contenant les mots clés des marées
+            if (texte.includes("PM") || texte.includes("BM") || texte.includes("PLEINE") || texte.includes("BASSE")) {
+                const type = (texte.includes("PM") || texte.includes("PLEINE")) ? "PM" : "BM";
                 
-                // Recherche de l'heure (ex: 09h06 ou 09:06)
-                const matchHeure = tr.textContent.match(/(\d{2})[h:](\d{2})/);
-                // Recherche du coefficient (nombre isolé de 2 ou 3 chiffres après le type)
-                const matchCoeff = tr.textContent.match(/(?:COEFF|COEFFICIENT)?\s*\b(\d{2,3})\b/i);
+                // Extraction de l'heure (format XXhXX)
+                const matchHeure = el.textContent.match(/(\d{2})h(\d{2})/);
+                // Extraction du coefficient (2 ou 3 chiffres isolés)
+                const matchCoeff = el.textContent.match(/\b(\d{2,3})\b/);
 
                 if (matchHeure) {
                     const d = new Date();
                     d.setHours(parseInt(matchHeure[1], 10), parseInt(matchHeure[2], 10), 0, 0);
-                    
-                    maréesRéelles.push({
+
+                    maréesTrouvées.push({
                         type: type,
-                        coeff: type === "PM" && matchCoeff ? matchCoeff[1] : "",
+                        coeff: type === "PM" && matchCoeff ? matchCoeff[1] : "—",
                         t: d,
                         heureStr: `${matchHeure[1]}h${matchHeure[2]}`
                     });
@@ -84,32 +83,30 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             }
         });
 
-        if (maréesRéelles.length === 0) throw new Error("Aucune donnée lisible trouvée");
+        if (maréesTrouvées.length === 0) throw new Error("Aucune donnée extraite");
 
-        // Tri et sélection des 4 prochaines marées glissantes
-        const prochains4 = maréesRéelles
-            .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
-            .sort((a, b) => a.t - b.t)
-            .slice(0, 4);
-
+        // Tri et filtrage pour n'avoir que les 4 marées principales
+        const uniques = Array.from(new Map(maréesTrouvées.map(m => [m.heureStr, m])).values());
+        const prochains4 = uniques.sort((a, b) => a.t - b.t).slice(0, 4);
+        
         const sensMaree = prochains4[0].type === "PM" ? "Montante ↑" : "Descendante ↓";
 
-        // 5. Rendu du tableau sombre (Identique PJ1 au format PJ2)
+        // 5. Rendu visuel propre intégré à ton application sombre
         const lignesHtml = prochains4.map(e => {
             const estPassee = e.t < maintenant;
             const label = e.type === "PM"
-                ? `<span style="color:#38bdf8; font-weight:bold; letter-spacing: 1px;">PM</span>`
-                : `<span style="color:#fdba74; font-weight:bold; letter-spacing: 1px;">BM</span>`;
+                ? `<span style="color:#38bdf8; font-weight:bold;">PM</span>`
+                : `<span style="color:#fdba74; font-weight:bold;">BM</span>`;
             
-            const colonneCoeff = e.coeff
+            const affichageCoeff = e.coeff !== "—" 
                 ? `<span style="color: #ffffff; font-weight: bold; font-size: 0.95rem; width: 40px; display: inline-block; text-align: center;">${e.coeff}</span>`
-                : `<span style="width: 40px; display: inline-block;"></span>`;
+                : `<span style="width: 40px; display: inline-block; text-align: center; color: rgba(255,255,255,0.2);">—</span>`;
 
             return `
                 <div class="data-ligne" style="width:100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${estPassee ? "opacity:0.3; font-style:italic;" : ""}">
                     <div style="display: flex; gap: 40px; align-items: center;">
                         <span class="label" style="width: 30px; display: inline-block;">${label}</span>
-                        ${colonneCoeff}
+                        ${affichageCoeff}
                     </div>
                     <span class="valeur" style="color: #ffffff; font-weight: 500; font-family: monospace; font-size: 1rem;">${e.heureStr}</span>
                 </div>`;
@@ -135,12 +132,12 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
         `;
 
     } catch (error) {
-        // En cas de micro-coupure, affichage du lien de secours fonctionnel
+        // En cas d'échec persistant du scraping local, retour au bouton propre qui fonctionne
         body.innerHTML = `
             <div style="width:100%; text-align:center; padding:15px 0;">
-                <p style="color:#94a3b8; font-size:0.85rem; font-style:italic; margin-bottom:10px;">Données en direct indisponibles</p>
+                <p style="color:#94a3b8; font-size:0.85rem; font-style:italic; margin-bottom:10px;">Données indisponibles en direct</p>
                 <a href="https://maree.info/${correspondancePorts[nomVilleAffiche.toLowerCase()] || '19'}" target="_blank" style="font-size:0.8rem; color:#38bdf8; text-decoration:none; font-weight:500;">
-                    Consulter le calendrier officiel ↗
+                    Consulter les marées du port ↗
                 </a>
             </div>`;
     }
