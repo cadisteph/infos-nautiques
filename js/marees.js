@@ -1,6 +1,6 @@
 // =======================================
-// INFOS NAUTIQUES - RENDER OFFICIEL DIRECT
-// js/marees.js — Multi-Villes & Temps Réel
+// INFOS NAUTIQUES - RENDER IMAGES SÉCURISÉ
+// js/marees.js — Affichage Garanti Multi-Villes
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutile) {
@@ -23,7 +23,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             return;
         }
 
-        // 2. Ton dictionnaire de correspondance des ports officiels
+        // 2. Dictionnaire de correspondance des ports officiels
         const correspondancePorts = {
             "le havre": "19",
             "étretat": "17",
@@ -42,23 +42,26 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             return;
         }
 
-        // 3. Rendu propre de l'image textuelle officielle du jour
-        // Nous appliquons un filtre CSS discret pour l'adapter élégamment au thème sombre (texte blanc, fond transparent/sombre)
+        // 3. Construction de l'URL de l'image via le Proxy CORS pour contourner le blocage (Anti-Hotlinking)
+        const urlImageOriginale = `https://maree.info/pub/today-${numPort}.png`;
+        const urlImageProxifiee = `https://corsproxy.io/?${encodeURIComponent(urlImageOriginale)}`;
+
+        // 4. Rendu HTML de l'espace avec l'image convertie en mode sombre
         body.innerHTML = `
-            <div style="width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 10px 0;">
-                <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; font-size:0.8rem; color:rgba(255,255,255,0.4);">
-                    <span style="background:#0284c7; color:#ffffff; padding:3px 8px; border-radius:4px; font-weight:bold;">Officiel SHOM</span>
+            <div style="width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 5px 0;">
+                <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:0.8rem; color:rgba(255,255,255,0.4);">
+                    <span style="background:#0284c7; color:#ffffff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.75rem;">Officiel SHOM</span>
                     <span>Port ${numPort}</span>
                 </div>
                 
-                <div style="background: rgba(30, 41, 59, 0.4); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: center; width: 100%; min-height: 120px;">
-                    <img src="https://maree.info/pub/today-${numPort}.png" 
+                <div style="background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center; width: 100%; min-height: 110px;">
+                    <img src="${urlImageProxifiee}" 
                          alt="Marées pour ${vActuelle.nom}" 
-                         style="filter: invert(0.9) hue-rotate(180deg) brightness(1.2); max-width: 100%; height: auto; object-fit: contain;"
-                         onerror="this.style.display='none'; this.parentElement.innerHTML='<p style=\'color:#f87171; font-size:0.85rem;\'>Données temporairement indisponibles</p>';" />
+                         style="filter: invert(0.95) hue-rotate(180deg) brightness(1.3) contrast(1.1); max-width: 100%; height: auto; object-fit: contain;"
+                         onerror="this.style.display='none'; this.parentElement.innerHTML='<p style=\'color:#94a3b8; font-size:0.8rem; font-style:italic;\'>Aperçu indisponible — Cliquez sur le lien ci-dessous</p>';" />
                 </div>
                 
-                <a href="https://maree.info/${numPort}" target="_blank" style="margin-top:12px; font-size:0.75rem; color:#38bdf8; text-decoration:none; font-weight:500;">
+                <a href="https://maree.info/${numPort}" target="_blank" style="margin-top:12px; font-size:0.75rem; color:#38bdf8; text-decoration:none; font-weight:500; hover:text-decoration:underline;">
                     Voir le calendrier complet sur Maree.info ↗
                 </a>
             </div>
