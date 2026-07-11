@@ -1,6 +1,6 @@
 // =======================================
-// INFOS NAUTIQUES - V28 MÉTÉO-CONCEPT INSEE
-// js/marees.js — Données SHOM via Code INSEE
+// INFOS NAUTIQUES - ALTERNATIVE OPEN-METEO
+// js/marees.js — Données de Marées Sans Clé
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutile) {
@@ -25,49 +25,48 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             return;
         }
 
-        if (!vActuelle.insee) {
-            throw new Error(`Code INSEE manquant pour ${vActuelle.nom}`);
-        }
-
-        // 2. Appel de l'API Météo-Concept avec le code INSEE officiel
-        const token = "9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773";
-        const urlAPI = `https://api.meteo-concept.com/api/marine/tide/${vActuelle.insee}?token=${token}`;
+        // 2. Appel du serveur alternatif Open-Meteo Marine (Sans clé et sans blocage)
+        const lat = vActuelle.latitude;
+        const lon = vActuelle.longitude;
+        const urlAPI = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=tide_predictions&timezone=Europe%2FParis`;
         
         const response = await fetch(urlAPI);
-        if (!response.ok) throw new Error(`Erreur serveur (HTTP ${response.status})`);
+        if (!response.ok) throw new Error(`Serveur injoignable (HTTP ${response.status})`);
         
         const data = await response.json();
-        
-        if (!data.tides || data.tides.length === 0) {
-            throw new Error("Aucune marée disponible pour cette commune");
-        }
+        if (!data.hourly || !data.hourly.tide_predictions) throw new Error("Données de marée non disponibles pour ce point");
 
+        const temps = data.hourly.time;
+        const hauteurs = data.hourly.tide_predictions;
         const maintenant = new Date();
         const maréesRéelles = [];
 
-        // 3. Extraction des données
-        data.tides.forEach(m => {
-            const dateHeure = new Date(m.datetime);
-            maréesRéelles.push({
-                type: m.type === "high" || m.type === "PM" ? "high" : "low",
-                t: dateHeure,
-                h: m.height,
-                coeff: m.coefficient || null
-            });
-        });
+        // 3. Détection des extrêmes (Pics pour Pleine Mer, Creux pour Basse Mer)
+        for (let i = 1; i < hauteurs.length - 1; i++) {
+            const hPrecedente = hauteurs[i - 1];
+            const hActuelle    = hauteurs[i];
+            const hSuivante   = hauteurs[i + 1];
+            const dateHeure    = new Date(temps[i]);
 
-        const prochains4 = maréesRéelles
-            .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
-            .sort((a, b) => a.t - b.t)
-            .slice(0, 4);
+            // Filtrage des événements de -2h dans le passé à +24h dans le futur
+            if (dateHeure >= new Date(maintenant.getTime() - 2 * 3600000)) {
+                if (hActuelle > hPrecedente && hActuelle > hSuivante) {
+                    maréesRéelles.push({ type: "high", t: dateHeure, h: hActuelle });
+                } else if (hActuelle < hPrecedente && hActuelle < hSuivante) {
+                    maréesRéelles.push({ type: "low", t: dateHeure, h: hActuelle });
+                }
+            }
+        }
 
-        if (prochains4.length === 0) throw new Error("Aucun horaire proche trouvé");
+        // Tri chronologique
+        maréesRéelles.sort((a, b) => a.t - b.t);
+        const prochains4 = maréesRéelles.slice(0, 4);
+
+        if (prochains4.length === 0) throw new Error("Aucun horaire trouvé");
 
         const sensMaree = prochains4[0].type === "high" ? "Montante ↑" : "Descendante ↓";
-        const premierCoeff = prochains4.find(c => c.coeff)?.coeff;
-        const affichageCoeff = premierCoeff ? ` • Coeff : ${premierCoeff}` : "";
 
-        // 4. Rendu HTML
+        // 4. Rendu HTML propre
         const lignesHtml = prochains4.map(e => {
             const estPassee = e.t < maintenant;
             const label = e.type === "high"
@@ -75,11 +74,10 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
                 : `<span style="color:#fdba74; font-weight:bold;">▼ Basse mer</span>`;
             
             const heureFormatee = e.t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-            const detailCoeff = e.coeff ? ` (Coeff ${e.coeff})` : "";
 
             return `
                 <div class="data-ligne" style="width:100%; display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${estPassee ? "opacity:0.4; font-style:italic;" : ""}">
-                    <span class="label">${label} ${estPassee ? "(récente)" : ""}${detailCoeff}</span>
+                    <span class="label">${label} ${estPassee ? "(récente)" : ""}</span>
                     <span class="valeur" style="color: #ffffff; font-weight: 500;">${heureFormatee} — ${e.h.toFixed(2)} m</span>
                 </div>`;
         }).join("");
@@ -88,7 +86,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             <div style="width:100%">
                 <div class="maree-statut" style="display:flex; gap:10px; margin-bottom:12px;">
                     <span style="background:#0284c7; color:#ffffff; padding:4px 10px; border-radius:6px; font-weight:bold; display:inline-block; font-size:0.9rem;">${sensMaree}</span>
-                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:6px; font-size:0.9rem; color:#ffffff; font-weight:500;">SHOM / Météo-Concept${affichageCoeff}</span>
+                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:6px; font-size:0.9rem; color:#ffffff; font-weight:500;">Données Open-Meteo Marine</span>
                 </div>
                 <div class="maree-horaires" style="margin-top:12px; width:100%;">
                     ${lignesHtml}
