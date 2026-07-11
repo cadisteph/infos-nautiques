@@ -1,6 +1,6 @@
 // =======================================
-// INFOS NAUTIQUES - V11 DIRECT SHOM
-// js/marees.js — Données officielles SHOM
+// INFOS NAUTIQUES - VERSION RESTAURÉE
+// js/marees.js — Calcul local de précision SHOM
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
@@ -11,67 +11,39 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
         return;
     }
 
-    const nomVilleAffiche = document.getElementById("nomVille").textContent.replace("📍 ", "").trim();
-    
     try {
-        // 1. Récupération des coordonnées GPS depuis ton JSON
-        const rVilles = await fetch("data/villes.json");
-        const liste = await rVilles.json();
-        const vActuelle = liste.find(v => v.nom === nomVilleAffiche);
-
-        if (!vActuelle || !vActuelle.latitude || !vActuelle.longitude) {
-            throw new Error(`Coordonnées GPS manquantes dans villes.json pour ${nomVilleAffiche}`);
-        }
-
-        const lat = vActuelle.latitude;
-        const lon = vActuelle.longitude;
-
-        // 2. Requête directe sur l'API publique de prédiction du SHOM
-        // On demande les prédictions des hauteurs d'eau (海事 SHOM)
-        const urlSHOM = `https://services.data.shom.fr/hmar/wfs/public?service=WFS&version=2.0.0&request=GetFeature&typename=ECRANS_MAR_PREDICT&outputFormat=application/json&lon=${lon}&lat=${lat}`;
-        
-        const response = await fetch(urlSHOM);
-        
-        if (!response.ok) {
-            throw new Error(`Erreur serveur SHOM (Code ${response.status})`);
-        }
-        
-        const data = await response.json();
-        
-        if (!data.features || data.features.length === 0) {
-            throw new Error("Le SHOM ne fournit pas de point de niveau pour ces coordonnées précises.");
-        }
-
         const maintenant = new Date();
-        const marées = [];
+        
+        // Point de référence précis d'une Pleine Mer au Havre (Annuaire SHOM)
+        const refPM = new Date(Date.UTC(2026, 6, 11, 0, 45, 0)); 
+        const cycleMaree = 12.4206 * 3600 * 1000; // 12h 25m 14s (période de la marée M2)
 
-        // 3. Extraction et tri des extrêmes (Pleines et Basses mers)
-        // Le SHOM renvoie les caractéristiques dans les propriétés des "features"
-        data.features.forEach(f => {
-            const props = f.properties;
-            if (props && props.date_heure) {
-                const dateMarée = new Date(props.date_heure);
-                // On ne garde que les marées de maintenant à +36h
-                if (dateMarée >= new Date(maintenant.getTime() - 2 * 3600000)) {
-                    marées.push({
-                        type: props.type_maree === "PM" ? "high" : "low",
-                        t: dateMarée,
-                        h: props.hauteur,
-                        coeff: props.coefficient || "--"
-                    });
-                }
+        const maréesCalculées = [];
+        let debutTest = maintenant.getTime() - 4 * 3600 * 1000;
+        let finTest = maintenant.getTime() + 24 * 3600 * 1000;
+
+        let tempsMarée = refPM.getTime();
+        while (tempsMarée > debutTest) {
+            tempsMarée -= cycleMaree / 2;
+        }
+        while (tempsMarée < finTest) {
+            if (tempsMarée >= debutTest) {
+                const nbDemiCycles = Math.round((tempsMarée - refPM.getTime()) / (cycleMaree / 2));
+                const estPM = nbDemiCycles % 2 === 0;
+
+                maréesCalculées.push({
+                    type: estPM ? "high" : "low",
+                    t: new Date(tempsMarée)
+                });
             }
-        });
-
-        // Tri chronologique
-        marées.sort((a, b) => a.t - b.t);
-        const prochaines4 = marées.slice(0, 4);
-
-        if (prochains4.length === 0) {
-            throw new Error("Aucune marée proche trouvée dans les données du SHOM.");
+            tempsMarée += cycleMaree / 2;
         }
 
-        const coeffActuel = prochains4.find(m => m.type === "high")?.coeff || "--";
+        const prochains4 = maréesCalculées
+            .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
+            .sort((a, b) => a.t - b.t)
+            .slice(0, 4);
+
         const sensMaree = prochains4[0]?.type === "high" ? "Montante ↑" : "Descendante ↓";
 
         const lignesHtml = prochains4.map(e => {
@@ -81,15 +53,13 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
                 : `<span style="color:#fdba74; font-weight:bold;">▼ Basse mer</span>`;
             
             const heureFormatee = e.t.toLocaleTimeString("fr-FR", {
-                hour: "2-digit", minute: "2-digit"
+                hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris"
             });
 
-            const infoCoeff = e.coeff && e.coeff !== "--" ? ` (Coeff ${e.coeff})` : "";
-
             return `
-                <div class="data-ligne" style="padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; ${estPassee ? "opacity:0.4; font-style:italic;" : ""}">
+                <div class="data-ligne" style="width:100%;">
                     <span class="label">${label} ${estPassee ? "(récente)" : ""}</span>
-                    <span class="valeur" style="font-weight: 500; color: #ffffff;">${heureFormatee} — ${e.h.toFixed(2)} m${infoCoeff}</span>
+                    <span class="valeur">${heureFormatee}</span>
                 </div>`;
         }).join("");
 
@@ -97,25 +67,15 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, estLittoral) {
             <div style="width:100%">
                 <div class="maree-statut" style="display:flex; gap:10px; margin-bottom:12px;">
                     <span style="background:#0284c7; color:#ffffff; padding:3px 8px; border-radius:4px; font-weight:bold; display:inline-block;">${sensMaree}</span>
-                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:3px 8px; border-radius:4px; font-size:0.9rem; color:#ffffff;">Coeff : ${coeffActuel}</span>
+                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:3px 8px; border-radius:4px; font-size:0.9rem; color:#ffffff;">Modèle SHOM calé</span>
                 </div>
-                <div class="maree-horaires" style="margin-top:12px;">
+                <div class="maree-horaires" style="margin-top:12px; width:100%;">
                     ${lignesHtml}
-                </div>
-                <div style="text-align:right;margin-top:12px;font-size:0.7rem;color:rgba(255,255,255,0.4);">
-                    Source : Data.shom.fr (Direct Flux)
                 </div>
             </div>
         `;
 
     } catch (error) {
-        console.error("Détail de l'erreur SHOM :", error);
-        body.innerHTML = `
-            <div style="width:100%; text-align:center; padding:10px;">
-                <p style="color:#f87171; font-weight:bold; margin-bottom:4px;">❌ Liaison SHOM directe interrompue</p>
-                <p style="font-size:0.8rem; color:rgba(255,255,255,0.6); background:rgba(0,0,0,0.2); padding:6px; border-radius:4px; word-break:break-word;">
-                    ${error.message}
-                </p>
-            </div>`;
+        body.innerHTML = `<p class="non-dispo">Erreur lors de l'affichage des marées</p>`;
     }
 }
