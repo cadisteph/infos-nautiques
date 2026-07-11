@@ -1,55 +1,51 @@
 // =======================================
-// INFOS NAUTIQUES - VERSION MÉTÉO-CONCEPT & SHOM
-// js/marees.js — Données Officielles Littoral 76
+// INFOS NAUTIQUES - V28 MÉTÉO-CONCEPT INSEE
+// js/marees.js — Données SHOM via Code INSEE
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutile) {
     const body = carte.querySelector(".carte-body");
     if (!body) return;
 
-    // Récupération propre du nom de la ville sélectionnée dans ton interface
     const nomVilleAffiche = document.getElementById("nomVille").textContent.replace("📍 ", "").trim();
     
     try {
-        // 1. Chargement de ton fichier villes.json
+        // 1. Lecture de ton fichier villes.json
         const rVilles = await fetch("data/villes.json");
         const liste = await rVilles.json();
-        
-        // Recherche stricte de la ville correspondante
         const vActuelle = liste.find(v => v.nom.trim().toLowerCase() === nomVilleAffiche.toLowerCase());
 
         if (!vActuelle) {
-            throw new Error(`Ville "${nomVilleAffiche}" introuvable dans data/villes.json`);
+            throw new Error(`Ville "${nomVilleAffiche}" introuvable`);
         }
 
-        // Vérification de la catégorie : si c'est la Seine, on bloque proprement
+        // Vérification de ta catégorie Seine (Fluviale)
         if (vActuelle.categorie === "Seine") {
             body.innerHTML = `<p class="non-dispo" style="color: #94a3b8; font-style: italic; text-align: center; margin: 15px 0; width:100%;">Zone fluviale — données de marée non disponibles</p>`;
             return;
         }
 
-        // 2. Appel de l'API Météo-Concept (Données officielles SHOM) via coordonnées GPS
-        const lat = vActuelle.latitude;
-        const lon = vActuelle.longitude;
+        if (!vActuelle.insee) {
+            throw new Error(`Code INSEE manquant pour ${vActuelle.nom}`);
+        }
+
+        // 2. Appel de l'API Météo-Concept avec le code INSEE officiel
         const token = "9d3f8048b6557cb217c58b330ac6713becc9f3426814914055468aaf7d408773";
-        
-        // Requête sur le point de marée le plus proche des coordonnées fournies
-        const urlAPI = `https://api.meteo-concept.com/api/marine/tide?token=${token}&latlng=${lat},${lon}`;
+        const urlAPI = `https://api.meteo-concept.com/api/marine/tide/${vActuelle.insee}?token=${token}`;
         
         const response = await fetch(urlAPI);
-        if (!response.ok) throw new Error(`Serveur Météo-Concept indisponible (HTTP ${response.status})`);
+        if (!response.ok) throw new Error(`Erreur serveur (HTTP ${response.status})`);
         
         const data = await response.json();
         
-        // Vérification du format des données renvoyées par Météo-Concept
         if (!data.tides || data.tides.length === 0) {
-            throw new Error("Aucune marée disponible pour ces coordonnées GPS");
+            throw new Error("Aucune marée disponible pour cette commune");
         }
 
         const maintenant = new Date();
         const maréesRéelles = [];
 
-        // 3. Extraction des marées (Météo-Concept fournit directement les pleines et basses mers précalculées)
+        // 3. Extraction des données
         data.tides.forEach(m => {
             const dateHeure = new Date(m.datetime);
             maréesRéelles.push({
@@ -60,7 +56,6 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             });
         });
 
-        // Filtrage pour garder les événements pertinents (de -2h dans le passé à +24h dans le futur)
         const prochains4 = maréesRéelles
             .filter(m => m.t >= new Date(maintenant.getTime() - 2 * 3600000))
             .sort((a, b) => a.t - b.t)
@@ -69,8 +64,6 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
         if (prochains4.length === 0) throw new Error("Aucun horaire proche trouvé");
 
         const sensMaree = prochains4[0].type === "high" ? "Montante ↑" : "Descendante ↓";
-        
-        // Recherche d'un coefficient valide dans les prochaines marées pour l'afficher si dispo
         const premierCoeff = prochains4.find(c => c.coeff)?.coeff;
         const affichageCoeff = premierCoeff ? ` • Coeff : ${premierCoeff}` : "";
 
