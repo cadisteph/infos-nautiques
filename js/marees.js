@@ -1,6 +1,6 @@
 // =======================================
-// INFOS NAUTIQUES - VERSION CORRIGÉE 100% OPÉRATIONNELLE
-// js/marees.js — Données Open-Meteo Marine Réelles
+// INFOS NAUTIQUES - AUTOMATISATION CORRIGÉE
+// js/marees.js — Flux Océanique Direct
 // =======================================
 
 async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutile) {
@@ -10,7 +10,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
     const nomVilleAffiche = document.getElementById("nomVille").textContent.replace("📍 ", "").trim();
     
     try {
-        // 1. Chargement de ton fichier villes.json
+        // 1. Lecture de ton fichier villes.json
         const rVilles = await fetch("data/villes.json");
         const liste = await rVilles.json();
         const vActuelle = liste.find(v => v.nom.trim().toLowerCase() === nomVilleAffiche.toLowerCase());
@@ -25,30 +25,29 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             return;
         }
 
-        // 2. URL officielle et vérifiée (Pas de sous-domaine 'marine-', pas de clé)
+        // 2. URL officielle et vérifiée du serveur de test Open-Meteo Marine
         const lat = vActuelle.latitude;
         const lon = vActuelle.longitude;
-        const urlAPI = `https://api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=tide_predictions&timezone=Europe%2FParis`;
+        const urlAPI = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=tide_predictions&timezone=Europe%2FParis`;
         
         const response = await fetch(urlAPI);
         if (!response.ok) throw new Error(`Serveur injoignable (HTTP ${response.status})`);
         
         const data = await response.json();
-        if (!data.hourly || !data.hourly.tide_predictions) throw new Error("Données indisponibles ici");
+        if (!data.hourly || !data.hourly.tide_predictions) throw new Error("Données indisponibles");
 
         const temps = data.hourly.time;
         const hauteurs = data.hourly.tide_predictions;
         const maintenant = new Date();
         const maréesRéelles = [];
 
-        // 3. Calcul des extrema (Pics et Creux)
+        // 3. Extraction des pics et creux
         for (let i = 1; i < hauteurs.length - 1; i++) {
             const hPrecedente = hauteurs[i - 1];
             const hActuelle    = hauteurs[i];
             const hSuivante   = hauteurs[i + 1];
             const dateHeure    = new Date(temps[i]);
 
-            // Fenêtre temporelle : de -2h à +24h
             if (dateHeure >= new Date(maintenant.getTime() - 2 * 3600000)) {
                 if (hActuelle > hPrecedente && hActuelle > hSuivante) {
                     maréesRéelles.push({ type: "high", t: dateHeure, h: hActuelle });
@@ -65,7 +64,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
 
         const sensMaree = prochains4[0].type === "high" ? "Montante ↑" : "Descendante ↓";
 
-        // 4. Injection du HTML
+        // 4. Rendu HTML
         const lignesHtml = prochains4.map(e => {
             const estPassee = e.t < maintenant;
             const label = e.type === "high"
@@ -85,7 +84,7 @@ async function calculerEtAfficherMarees(carte, mareeDataAncienne, argumentInutil
             <div style="width:100%">
                 <div class="maree-statut" style="display:flex; gap:10px; margin-bottom:12px;">
                     <span style="background:#0284c7; color:#ffffff; padding:4px 10px; border-radius:6px; font-weight:bold; display:inline-block; font-size:0.9rem;">${sensMaree}</span>
-                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:6px; font-size:0.9rem; color:#ffffff; font-weight:500;">Données Open-Meteo Marine</span>
+                    <span class="badge-coeff" style="background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:6px; font-size:0.9rem; color:#ffffff; font-weight:500;">Météo Océanique</span>
                 </div>
                 <div class="maree-horaires" style="margin-top:12px; width:100%;">
                     ${lignesHtml}
