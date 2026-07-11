@@ -1,21 +1,27 @@
 // =======================================
-// INFOS NAUTIQUES - VERSION DE SECOURS FIXE
-// js/marees.js — Sécurité Maximale & Anti-Plantage
+// INFOS NAUTIQUES - VERSION MINI & COMPACTE
+// js/marees.js — Gain de place maximal
 // =======================================
 
 function calculerEtAfficherMarees(carte) {
-    // 1. Recherche du conteneur dans l'encart Marée (on teste le body ou la carte elle-même)
+    // 1. On cherche le conteneur principal
     let conteneur = carte.querySelector(".carte-body") || carte;
     if (!conteneur) return;
 
-    // 2. Récupération sécurisée du nom de la ville
+    // 2. On réduit drastiquement les marges de l'encart parent pour l'aplatir
+    carte.style.padding = "8px 12px";
+    carte.style.minHeight = "auto"; 
+    if (carte.parentElement) {
+        carte.parentElement.style.height = "auto";
+    }
+
+    // 3. Récupération du nom de la ville
     let nomVille = "votre port";
     const elVille = document.getElementById("nomVille");
     if (elVille) {
         nomVille = elVille.textContent.replace("📍 ", "").trim();
     }
 
-    // 3. Correspondance des codes ports pour maree.info
     const correspondancePorts = {
         "le havre": "19",
         "étretat": "17",
@@ -27,16 +33,16 @@ function calculerEtAfficherMarees(carte) {
     };
 
     const nomNormalise = nomVille.toLowerCase().trim();
-    const numPort = correspondancePorts[nomNormalise] || "19"; // Le Havre par défaut si inconnu
+    const numPort = correspondancePorts[nomNormalise] || "19";
 
-    // 4. Injection immédiate du HTML sans risque de blocage
+    // 4. Rendu ultra-compact : Tout sur une seule ligne horizontale
     conteneur.innerHTML = `
-        <div style="width:100%; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box;">
-            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin: 0 0 15px 0; text-align: center;">
-                Consultez les horaires officiels pour le port de <strong>${nomVille}</strong>.
-            </p>
-            <a href="https://maree.info/${numPort}" target="_blank" style="display: inline-block; font-size: 0.85rem; color: #38bdf8; text-decoration: none; font-weight: 500; border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 16px; border-radius: 6px; background: rgba(56, 189, 248, 0.05);">
-                Ouvrir Maree.info (Port ${numPort}) ↗
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; padding: 5px 0; box-sizing: border-box;">
+            <span style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.6);">
+                Marées de <strong>${nomVille}</strong>
+            </span>
+            <a href="https://maree.info/${numPort}" target="_blank" style="font-size: 0.8rem; color: #38bdf8; text-decoration: none; font-weight: 500; background: rgba(56, 189, 248, 0.1); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2); white-space: nowrap;">
+                Maree.info ↗
             </a>
         </div>
     `;
